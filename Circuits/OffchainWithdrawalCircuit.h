@@ -23,6 +23,7 @@ public:
     const Constants& constants;
 
     // User state
+    // 用户可以指定支付费用的token，支付费用之前token的余额值
     BalanceGadget balanceFBefore;
     BalanceGadget balanceBefore;
     AccountGadget accountBefore;
@@ -49,9 +50,11 @@ public:
     RequireAccuracyGadget requireAccuracyAmountWithdrawn;
 
     // Calculate the new balance
+    // 计算新的余额值
     UnsafeSubGadget balance_after;
 
     // Increase the nonce of the user by 1
+    // nonce++
     AddGadget nonce_after;
 
     // Update User
@@ -80,6 +83,7 @@ public:
         constants(_constants),
 
         // User state
+        // 用户之前的账户状态
         balanceFBefore(pb, FMT(prefix, ".balanceFBefore")),
         balanceBefore(pb, FMT(prefix, ".balanceBefore")),
         accountBefore(pb, FMT(prefix, ".accountBefore")),
@@ -98,11 +102,15 @@ public:
         requireAccuracyFee(pb, fFee.value(), fee.packed, Float16Accuracy, NUM_BITS_AMOUNT, FMT(prefix, ".requireAccuracyFee")),
 
         // Fee payment from the user to the operator
+        // 用户给操作员进行转账
         feePayment(pb, NUM_BITS_AMOUNT, balanceFBefore.balance, balanceBefore_O.balance, fFee.value(), FMT(prefix, ".feePayment")),
 
         // Calculate how much can be withdrawn
+        // 要求退款金额和账户当前金额取最小值
         amountToWithdraw(pb, amountRequested.packed, balanceBefore.balance, NUM_BITS_AMOUNT, FMT(prefix, ".min(amountRequested, balance)")),
+        // 退款数量
         amountWithdrawn(pb, constants, Float24Encoding, FMT(prefix, ".amountWithdrawn")),
+        // 获得指定精确的amountWithdrawn值
         requireAccuracyAmountWithdrawn(pb, amountWithdrawn.value(), amountToWithdraw.result(), Float24Accuracy, NUM_BITS_AMOUNT, FMT(prefix, ".requireAccuracyAmountRequested")),
 
         // Calculate the new balance
@@ -112,26 +120,33 @@ public:
         nonce_after(pb, accountBefore.nonce, constants.one, NUM_BITS_NONCE, FMT(prefix, ".nonce_after")),
 
         // Update User
+        // 更新用户费用账户的balance
+        // 更新费用root
         updateBalanceF_A(pb, accountBefore.balancesRoot, feeTokenID.bits,
                          {balanceFBefore.balance, balanceFBefore.tradingHistory},
                          {feePayment.X, balanceFBefore.tradingHistory},
                          FMT(prefix, ".updateBalanceF_A")),
+        // 更新用户金额账户的balance
+        // 更新金额root
         updateBalance_A(pb, updateBalanceF_A.result(), tokenID.bits,
                         {balanceBefore.balance, balanceBefore.tradingHistory},
                         {balance_after.result(), balanceBefore.tradingHistory},
                         FMT(prefix, ".updateBalance_A")),
+        // 更新account的根节点
         updateAccount_A(pb, accountsMerkleRoot, accountID.bits,
                         {accountBefore.publicKey.x, accountBefore.publicKey.y, accountBefore.nonce, accountBefore.balancesRoot},
                         {accountBefore.publicKey.x, accountBefore.publicKey.y, nonce_after.result(), updateBalance_A.result()},
                         FMT(prefix, ".updateAccount_A")),
 
         // Update Operator
+        // operatorBalancesRoot为operator接收费用之前的根节点状态
         updateBalanceF_O(pb, operatorBalancesRoot, feeTokenID.bits,
                          {balanceBefore_O.balance, balanceBefore_O.tradingHistory},
                          {feePayment.Y, balanceBefore_O.tradingHistory},
                          FMT(prefix, ".updateBalanceF_O")),
 
         // Signature
+        // 验证签名，哈希使用posedion哈希，签名算法使用EdDSA
         hash(pb, var_array({
             blockExchangeID,
             accountID.packed,
@@ -337,10 +352,12 @@ public:
                 exchangeID.packed,
                 std::string("withdrawals_") + std::to_string(j)
             );
+            // 每次更新withdraw的账户状态，只是保留修改operator操作费用的balanceRoot，最后对balanceRoot进行一次更新
             withdrawals.back().generate_r1cs_constraints();
         }
 
         // Update Operator
+        // 最后更新一次balanceRoot
         updateAccount_O.reset(new UpdateAccountGadget(pb, withdrawals.back().getNewAccountsRoot(), operatorAccountID.bits,
             {accountBefore_O.publicKey.x, accountBefore_O.publicKey.y, accountBefore_O.nonce, accountBefore_O.balancesRoot},
             {accountBefore_O.publicKey.x, accountBefore_O.publicKey.y, accountBefore_O.nonce, withdrawals.back().getNewOperatorBalancesRoot()},
@@ -368,6 +385,7 @@ public:
         publicData.generate_r1cs_constraints();
 
         // Check the new merkle root
+        // 检查merkletreeRoot的值
         requireEqual(pb, updateAccount_O->result(), merkleRootAfter.packed, "newMerkleRoot");
     }
 

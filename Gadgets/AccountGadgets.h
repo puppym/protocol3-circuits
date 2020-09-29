@@ -117,7 +117,9 @@ struct BalanceState
 class BalanceGadget : public GadgetT
 {
 public:
+    // balnace 
     VariableT balance;
+    // tradingHistoryRoot
     VariableT tradingHistory;
 
     BalanceGadget(
@@ -142,11 +144,15 @@ public:
 class UpdateBalanceGadget : public GadgetT
 {
 public:
+    // 
     HashBalanceLeaf leafBefore;
     HashBalanceLeaf leafAfter;
 
+    // 证明路径
     const VariableArrayT proof;
+    // Merkle路径验证器
     MerklePathCheckT proofVerifierBefore;
+    // Merkle新根节点计算
     MerklePathT rootCalculatorAfter;
 
     UpdateBalanceGadget(
@@ -163,7 +169,11 @@ public:
         leafAfter(pb, var_array({after.balance, after.tradingHistory}), FMT(prefix, ".leafAfter")),
 
         proof(make_var_array(pb, TREE_DEPTH_TOKENS * 3, FMT(prefix, ".proof"))),
+        // 之前的叶子节点加上路径得到之前的根节点，与期望的根节点验证，确认之前状态的正确性
+        // 验证之前的状态
         proofVerifierBefore(pb, TREE_DEPTH_TOKENS, tokenID, leafBefore.result(), merkleRoot, proof, FMT(prefix, ".pathBefore")),
+        // 之后的叶子节点加上路径得到之后的根节点，得到状态修改之后的根节点
+        // 获取叶子节点修改之后的结果
         rootCalculatorAfter(pb, TREE_DEPTH_TOKENS, tokenID, leafAfter.result(), proof, FMT(prefix, ".pathAfter"))
     {
 

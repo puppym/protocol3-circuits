@@ -952,6 +952,8 @@ public:
 // We have to make sure there are no overflows and the value is <= the original value (so a user never spends more) so we also check:
 // - value <= original
 // - value < 2^maxNumBits
+// 用来校验float类型在电路编码的精度损失，精确度损失在不同的场景有不同的需求 [link](https://github.com/Loopring/protocols/pull/156)。要求给定数的精确度大于`_accuracy`的值
+
 class RequireAccuracyGadget : public GadgetT
 {
 public:
@@ -1137,6 +1139,8 @@ public:
 };
 
 // Verifies a signature hashed with Poseidon
+// 用poseidon哈希来验证
+
 class SignatureVerifier : public GadgetT
 {
 public:

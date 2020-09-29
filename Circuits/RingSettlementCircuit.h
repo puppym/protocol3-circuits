@@ -601,6 +601,7 @@ public:
         {
             publicData.add(operatorAccountID.bits);
             // Transform the ring data
+            // 压缩ringsettlement的数据，链下算一遍hash，然后publicdatahash传到链上之后会对两者进行校验，确保链下生成proof的ringsettlement数据和链上的数据一直
             transformData.generate_r1cs_constraints(numRings, flattenReverse(dataAvailabityData.data));
             publicData.add(reverse(transformData.result()));
         }
@@ -656,6 +657,7 @@ public:
         updateAccount_O->generate_r1cs_witness(block.accountUpdate_O.proof);
 
         // Transform the ring data
+        // Onchain 操作
         if (onchainDataAvailability)
         {
             transformData.generate_r1cs_witness();

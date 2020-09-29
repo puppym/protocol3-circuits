@@ -113,30 +113,38 @@ public:
         type(pb, NUM_BITS_TYPE, FMT(prefix, ".type")),
 
         // Signature
+        // 首先对InternalTransfer from方的交易进行验签
         hash(pb, var_array({blockExchangeID, accountID_From.packed, accountID_To.packed, tokenID.packed, amount.packed, feeTokenID.packed, fee.packed, accountBefore_From.nonce}), FMT(this->annotation_prefix, ".hash")),
         signatureVerifier(pb, params, constants, accountBefore_From.publicKey, hash.result(), FMT(prefix, ".signatureVerifier"), false),
 
         // Type
         signatureInvalid(pb, signatureVerifier.result(), ".signatureInvalid"),
         numConditionalTransfersAfter(pb, numConditionalTransfersBefore, signatureInvalid.result(), ".numConditionalTransfersAfter"),
+        // 这里对交易的type进行了校验
         type_eq_signatureInvalid(pb, type.packed, signatureInvalid.result(), ".type_eq_signatureInvalid"),
 
         // User To account check
+        // 确保to账户的地址存在
         publicKeyX_notZero(pb, accountBefore_To.publicKey.x, FMT(prefix, ".publicKeyX_notZero")),
 
         // Fee as float
+        // 确定费用值，并且对费用值的精确度进行约束
         fFee(pb, constants, Float16Encoding, FMT(prefix, ".fFee")),
         requireAccuracyFee(pb, fFee.value(), fee.packed, Float16Accuracy, NUM_BITS_AMOUNT, FMT(prefix, ".requireAccuracyFee")),
         // Amount as float
+        // 确定交易金额，并且对交易金额进行的精确度进行约束
         fAmount(pb, constants, Float24Encoding, FMT(prefix, ".fTansAmount")),
         requireAccuracyAmount(pb, fAmount.value(), amount.packed, Float24Accuracy, NUM_BITS_AMOUNT, FMT(prefix, ".requireAccuracyAmount")),
 
         // Fee payment from From to the operator
+        // from支付交易费用
         feePayment(pb, NUM_BITS_AMOUNT, balanceFBefore_From.balance, balanceBefore_O.balance, fFee.value(), FMT(prefix, ".feePayment")),
         // Transfer from From to To
+        // transfer转账费用支付
         transferPayment(pb, NUM_BITS_AMOUNT, balanceTBefore_From.balance, balanceTBefore_To.balance, fAmount.value(), FMT(prefix, ".transferPayment")),
 
         // Increase the nonce of From by 1 (unless it's a conditional transfer)
+        // nonce++
         nonce_From_after(pb, accountBefore_From.nonce, signatureVerifier.result(), NUM_BITS_NONCE, FMT(prefix, ".nonce_From_after")),
 
         // Update User From
@@ -164,6 +172,7 @@ public:
                          FMT(prefix, ".updateAccount_To")),
 
         // Update Operator
+        // 更新operator的balanceRoot
         updateBalanceF_O(pb, operatorBalancesRoot, feeTokenID.bits,
                          {balanceBefore_O.balance, balanceBefore_O.tradingHistory},
                          {feePayment.Y, balanceBefore_O.tradingHistory},
@@ -380,6 +389,7 @@ public:
         transfers.reserve(numTransfers);
         for (size_t j = 0; j < numTransfers; j++)
         {
+            // 每次循环更新transAccountsRoot以及operatorBalanceRoot，最后再对operatorAccountRoot的值进行更新
             VariableT transAccountsRoot = (j == 0) ? merkleRootBefore.packed : transfers.back().getNewAccountsRoot();
             VariableT transOperatorBalancesRoot = (j == 0) ? accountBefore_O.balancesRoot : transfers.back().getNewOperatorBalancesRoot();
 
@@ -390,12 +400,14 @@ public:
                 transAccountsRoot,
                 transOperatorBalancesRoot,
                 exchangeID.packed,
+                // 获取验签通过的转账交易的数量
                 (j == 0) ? constants.zero : transfers.back().getNewNumConditionalTransfers(),
                 std::string("transfer_") + std::to_string(j));
             transfers.back().generate_r1cs_constraints();
         }
 
         // Update Operator
+        // 最后更新operatorAccountRoot
         updateAccount_O.reset(new UpdateAccountGadget(pb, transfers.back().getNewAccountsRoot(), operatorAccountID.bits,
             {accountBefore_O.publicKey.x, accountBefore_O.publicKey.y, accountBefore_O.nonce, accountBefore_O.balancesRoot},
             {accountBefore_O.publicKey.x, accountBefore_O.publicKey.y, accountBefore_O.nonce, transfers.back().getNewOperatorBalancesRoot()},
@@ -403,6 +415,7 @@ public:
         updateAccount_O->generate_r1cs_constraints();
 
         // Num conditional transfers
+        // 验签通过的内部交易数量
         numConditionalTransfers.reset(new libsnark::dual_variable_gadget<FieldT>(
             pb, transfers.back().getNewNumConditionalTransfers(), 32, ".numConditionalTransfers")
         );

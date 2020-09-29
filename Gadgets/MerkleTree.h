@@ -79,6 +79,7 @@ public:
     }
 };
 
+// 根据路径以及叶子节点计算出一个新的根节点
 template<typename HashT>
 class merkle_path_compute_4 : public GadgetT
 {
@@ -147,6 +148,7 @@ public:
 /**
 * Merkle path authenticator, verifies computed root matches expected result
 */
+// 计算新的根节点，并且对新的根节点进行验证
 template<typename HashT>
 class merkle_path_authenticator_4 : public merkle_path_compute_4<HashT>
 {
@@ -193,7 +195,7 @@ using HashTradingHistoryLeaf = Poseidon_gadget_T<5, 1, 6, 52, 2, 1>;
 //using HashAccountLeaf = Poseidon_gadget_T<5, 1, 6, 52, 4, 1>;
 //using HashBalanceLeaf = Poseidon_gadget_T<3, 1, 6, 51, 2, 1>;
 //using HashTradingHistoryLeaf = Poseidon_gadget_T<4, 1, 6, 52, 3, 1>;
-
+// 四叉merkletree
 using MerklePathCheckT = merkle_path_authenticator_4<HashMerkleTree>;
 using MerklePathT = merkle_path_compute_4<HashMerkleTree>;
 

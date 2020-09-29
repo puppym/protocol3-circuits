@@ -74,27 +74,36 @@ public:
 
         // Calculate how much can be withdrawn
         // In shutdown mode always withdraw the complete balance
+        // 计算退款值
         amountToWithdrawMin(pb, amountRequested.packed, balanceBefore.balance, NUM_BITS_AMOUNT, FMT(prefix, ".min(amountRequested, balance)")),
+        // bShutdownMode为true的情况下，直接返回该账户所有的balance
+        // 这里有点绕！！！
         amountToWithdraw(pb, bShutdownMode, balanceBefore.balance, amountToWithdrawMin.result(), FMT(prefix, ".amountToWithdraw")),
         // Float
+        // 退款值的精度修改
         amountWithdrawn(pb, constants, Float24Encoding, FMT(prefix, ".amountWithdrawn")),
         requireAccuracyAmountWithdrawn(pb, amountWithdrawn.value(), amountToWithdraw.result(), Float24Accuracy, NUM_BITS_AMOUNT, FMT(prefix, ".requireAccuracyAmountRequested")),
 
         // Shutdown mode - Reset values to genesis state
+        // 这里bShutDownMode为true的情况下，减去未修改精确度的值，为false的情况下，减去修改精确度的值
         amountToSubtract(pb, bShutdownMode, amountToWithdraw.result(), amountWithdrawn.value(), FMT(prefix, ".amountToSubtract")),
+        // 修改merkleTree状态至初始状态
         tradingHistoryAfter(pb, bShutdownMode, constants.emptyTradeHistory, balanceBefore.tradingHistory, FMT(prefix, ".tradingHistoryAfter")),
         publicKeyXAfter(pb, bShutdownMode, constants.zero, accountBefore.publicKey.x, FMT(prefix, ".publicKeyXAfter")),
         publicKeyYAfter(pb, bShutdownMode, constants.zero, accountBefore.publicKey.y, FMT(prefix, ".publicKeyYAfter")),
         nonceAfter(pb, bShutdownMode, constants.zero, accountBefore.nonce, FMT(prefix, ".nonceAfter")),
 
         // Calculate the new balance
+        // 计算新的账户值
         balance_after(pb, balanceBefore.balance, amountToSubtract.result(), FMT(prefix, ".balance_after")),
 
         // Update User
+        // 更新账户A balance的根节点
         updateBalance_A(pb, accountBefore.balancesRoot, tokenID.bits,
                         {balanceBefore.balance, balanceBefore.tradingHistory},
                         {balance_after.result(), tradingHistoryAfter.result()},
                         FMT(prefix, ".updateBalance_A")),
+        // 更新账户A account的根节点
         updateAccount_A(pb, accountsMerkleRoot, accountID.bits,
                         {accountBefore.publicKey.x, accountBefore.publicKey.y, accountBefore.nonce, accountBefore.balancesRoot},
                         {publicKeyXAfter.result(), publicKeyYAfter.result(), nonceAfter.result(), updateBalance_A.result()},
