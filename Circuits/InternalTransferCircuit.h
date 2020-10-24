@@ -119,8 +119,9 @@ public:
 
         // Type
         signatureInvalid(pb, signatureVerifier.result(), ".signatureInvalid"),
+        // numConditionalTransfersAfter计算没有验签通过交易数量。
         numConditionalTransfersAfter(pb, numConditionalTransfersBefore, signatureInvalid.result(), ".numConditionalTransfersAfter"),
-        // 这里对交易的type进行了校验
+        // 这里对交易的type进行了校验，即验签结果和type值的类型需要相同
         type_eq_signatureInvalid(pb, type.packed, signatureInvalid.result(), ".type_eq_signatureInvalid"),
 
         // User To account check
@@ -400,7 +401,7 @@ public:
                 transAccountsRoot,
                 transOperatorBalancesRoot,
                 exchangeID.packed,
-                // 获取验签通过的转账交易的数量
+                // 获取验签不通过的转账交易的数量
                 (j == 0) ? constants.zero : transfers.back().getNewNumConditionalTransfers(),
                 std::string("transfer_") + std::to_string(j));
             transfers.back().generate_r1cs_constraints();

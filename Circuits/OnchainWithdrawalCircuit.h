@@ -323,6 +323,7 @@ public:
             withdrawals[i].generate_r1cs_witness(block.withdrawals[i]);
         }
         // Cannot be done in parallel
+        // 该hashers不能并行做的原因在于其hashers的前后会有依赖关系
         for(unsigned int i = 0; i < block.withdrawals.size(); i++)
         {
             hashers[i].generate_r1cs_witness();
