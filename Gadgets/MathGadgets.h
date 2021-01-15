@@ -1180,7 +1180,7 @@ namespace Loopring
             // Calculate the expected public input
             calculatedHash->generate_r1cs_witness_from_bits();
             // 对public_Input变量进行赋值操作,将电路中的publicInput 进行赋值操作
-            // 对于public_Input变量在构造电路时需要对其进行赋值，在验证proof的是否也需要传入值
+            // 对于public_Input变量在构造电路时需要对其进行赋值，在验证proof的是否也需要
             pb.val(publicInput) = pb.val(calculatedHash->packed);
 
             printBits("[ZKS]publicData: 0x", flattenReverse(publicDataBits).get_bits(pb), false);
